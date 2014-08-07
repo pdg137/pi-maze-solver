@@ -31,6 +31,7 @@ int32_t turn_goal;
 int32_t state_start_millis;
 int32_t state_start_distance;
 int32_t follow_min_distance;
+int16_t angle_degrees;
 
 uint8_t Follow::sensors[5];
 int16_t Follow::pos;
@@ -109,6 +110,9 @@ void Follow::update()
   case STATE_TURNING:
     turn();
     break;
+  case STATE_SMOOTH_TURNING:
+    smooth_turn();
+    break;
   case STATE_SNAPPING:
     snap();
     break;
@@ -122,27 +126,53 @@ void Follow::doTurn(int16_t angle_degrees)
   state = STATE_TURNING;
 }
 
+void Follow::doSmoothTurn(int16_t angle_degrees)
+{
+  Encoders::reset();
+  turn_goal = angle_degrees*11;
+  state = STATE_SMOOTH_TURNING;
+}
+
 void Follow::turn()
 {
   if(turn_goal > 0)
   {
-    Motors::set(100,-100);
+    Motors::set(SPEED,-SPEED);
   
     if(Encoders::turn >= turn_goal)
       state = STATE_SNAPPING;
   }
   else
   {
-    Motors::set(-100,100);
+    Motors::set(-SPEED,SPEED);
     
     if(Encoders::turn <= turn_goal)
       state = STATE_SNAPPING;
   }
 }
 
-void Follow::doFollow(uint32_t follow_min_d)
+void Follow::smooth_turn()
+{
+  if(turn_goal > 0)
+  {
+    Motors::set(SPEED,SPEED/4);
+  
+    if(Encoders::turn >= turn_goal)
+      state = STATE_WAITING;
+  }
+  else
+  {
+    Motors::set(SPEED/4,SPEED);
+    
+    if(Encoders::turn <= turn_goal)
+      state = STATE_WAITING;
+  }
+}
+
+void Follow::doFollow(uint32_t follow_min_d, int16_t angle_d)
 { 
   follow_min_distance = follow_min_d;
+  angle_degrees = angle_d;
   Encoders::reset();
   off_line = 0;
   detected_intersection = 0;
@@ -160,10 +190,10 @@ void Follow::snap()
 {
   int32_t diff = last_pos - pos;
   int32_t pid = pos/4 - diff;
-  Motors::set(limit(pid,-100,100), limit(-pid,-100,100));
+  Motors::set(limit(pid,-SPEED,SPEED), limit(-pid,-SPEED,SPEED));
   last_pos = pos;
   
-  if(millis() - state_start_millis > 100)
+  if(millis() - state_start_millis > 50)
     state = STATE_WAITING;
 }
 
@@ -240,6 +270,9 @@ void Follow::follow()
     detected_straight = on_line && Encoders::distance - on_line_distance > 100;
     state = STATE_FOLLOWING_MORE;
   }
+  
+  if(angle_degrees != 0 && Encoders::distance - state_start_distance > follow_min_distance)
+    doSmoothTurn(angle_degrees);
 
   uint16_t speed = SPEED;
   if(detected_intersection)

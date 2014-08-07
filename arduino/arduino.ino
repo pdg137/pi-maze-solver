@@ -10,6 +10,8 @@
 #define COMMAND_TURN_RIGHT 2
 #define COMMAND_TURN_BACK 3
 #define COMMAND_FOLLOW 4
+#define COMMAND_FOLLOW_THEN_LEFT 5
+#define COMMAND_FOLLOW_THEN_RIGHT 6
 
 struct
 {
@@ -73,6 +75,12 @@ void check_command()
     break;
   case COMMAND_FOLLOW:
     Follow::doFollow(data.follow_min_distance);
+    break;
+  case COMMAND_FOLLOW_THEN_LEFT:
+    Follow::doFollow(data.follow_min_distance,-45);
+    break;
+  case COMMAND_FOLLOW_THEN_RIGHT:
+    Follow::doFollow(data.follow_min_distance,45);
     break;
   }
 }
