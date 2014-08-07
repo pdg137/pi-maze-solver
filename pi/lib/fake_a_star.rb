@@ -21,7 +21,7 @@ class FakeAStar
     yield response
   end
 
-  def follow(follow_min_distance)
+  def follow(follow_min_distance, smooth_turn = nil)
     original_pos = @pos
     exits = nil
     distance = 0
@@ -55,6 +55,12 @@ class FakeAStar
                :intersection
              end
 
+    # blank out exits and status on smooth_turn
+    if smooth_turn
+      exits = []
+      status = :smooth_turn_done
+      @vec = @vec.turn(smooth_turn)
+    end
 
     response = ResponseState::Response.new(status,
                                            "",

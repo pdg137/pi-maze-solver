@@ -43,8 +43,16 @@ class AStar
     send_command(3,0)
   end
 
-  def send_follow_command(follow_min_distance)
-    send_command(4,follow_min_distance)
+  def send_follow_command(follow_min_distance, smooth_turn = nil)
+    command = case smooth_turn
+              when :left
+                5
+              when :right
+                6
+              else
+                4
+              end
+    send_command(command,follow_min_distance)
   end
 
   def get_raw_report
@@ -70,8 +78,8 @@ class AStar
     @i2c.write(20, [6,1,led].pack("CCC"))
   end
 
-  def follow(follow_min_distance, &block)
-    return Follow.new(self, follow_min_distance).call(&block)
+  def follow(follow_min_distance, smooth_turn = nil, &block)
+    return Follow.new(self, follow_min_distance, smooth_turn).call(&block)
   end
 
   def turn(dir, &block)

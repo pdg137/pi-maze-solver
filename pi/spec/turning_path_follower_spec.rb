@@ -2,8 +2,8 @@ require 'spec_helper'
 require 'turning_path_follower'
 
 def yield_arrays(follower, path)
-  follower.compute(path) do |x,y|
-    yield [x,y]
+  follower.compute(path) do |x,y,z|
+    yield [x,y,z]
   end
 end
 
@@ -15,31 +15,31 @@ describe TurningPathFollower do
   specify do
     expect { |b|
       yield_arrays(subject, [:left,:right], &b)
-    }.to yield_successive_args( [:left, limit],
-                                [:right, limit] )
+    }.to yield_successive_args( [:left, limit, :right],
+                                [:right, limit, nil] )
   end
 
   it "simplifies straights and nones" do
     expect { |b|
       yield_arrays(subject, [:left,:straight,:none,:right], &b)
-    }.to yield_successive_args( [:left, unit*2+limit],
-                                [:right, limit] )
+    }.to yield_successive_args( [:left, unit*2+limit, :right],
+                                [:right, limit, nil] )
   end
 
   it "does no more than 6 in a group if possible" do
     expect { |b|
       yield_arrays(subject, [:left,:straight,:straight,:straight,:straight,:straight,:straight,:right], &b)
-    }.to yield_successive_args( [:left, unit*5+limit],
-                                [:straight, limit],
-                                [:right, limit])
+    }.to yield_successive_args( [:left, unit*5+limit, nil],
+                                [:straight, limit, :right],
+                                [:right, limit, nil])
   end
 
   it "makes the initial group smaller if necessary to not start with :none" do
     expect { |b|
       yield_arrays(subject, [:left,:straight,:straight,:straight,:none,:none,:none,:right], &b)
-    }.to yield_successive_args( [:left, unit*2+limit],
-                                [:straight, unit*3+limit],
-                                [:right, limit])
+    }.to yield_successive_args( [:left, unit*2+limit, nil],
+                                [:straight, unit*3+limit, :right],
+                                [:right, limit, nil])
   end
 
   context "path with a 6x straight segment including some :none" do
@@ -48,8 +48,8 @@ describe TurningPathFollower do
     it "does not attempt to split up the straightaway" do
       expect { |b|
         yield_arrays(subject, path, &b)
-      }.to yield_successive_args( [:right, unit*5+limit],
-                                  [:right, limit]
+      }.to yield_successive_args( [:right, unit*5+limit, :right],
+                                  [:right, limit, nil]
                                   )
     end
   end
@@ -60,9 +60,9 @@ describe TurningPathFollower do
     it "does not attempt to split up the straightaway" do
       expect { |b|
         yield_arrays(subject, path, &b)
-      }.to yield_successive_args( [:right, unit*3+limit],
-                                  [:straight, unit*2+limit],
-                                  [:right, limit]
+      }.to yield_successive_args( [:right, unit*3+limit, nil],
+                                  [:straight, unit*2+limit, :right],
+                                  [:right, limit, nil]
                                   )
     end
   end
