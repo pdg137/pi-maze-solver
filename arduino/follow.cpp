@@ -32,6 +32,7 @@ int32_t state_start_millis;
 int32_t state_start_distance;
 int32_t follow_min_distance;
 int16_t angle_degrees;
+int32_t turn_start;
 
 uint8_t Follow::sensors[5];
 int16_t Follow::pos;
@@ -128,7 +129,8 @@ void Follow::doTurn(int16_t angle_degrees)
 
 void Follow::doSmoothTurn(int16_t angle_degrees)
 {
-  Encoders::reset();
+  // can't reset because it would screw up our total distance
+  turn_start = Encoders::turn;
   turn_goal = angle_degrees*11;
   state = STATE_SMOOTH_TURNING;
 }
@@ -155,16 +157,20 @@ void Follow::smooth_turn()
 {
   if(turn_goal > 0)
   {
-    Motors::set(SPEED,SPEED/4);
-  
-    if(Encoders::turn >= turn_goal)
+    if(Encoders::turn - turn_start < turn_goal)
+      Motors::set(SPEED,SPEED/4);
+    else if(off_line)
+      Motors::set(SPEED, SPEED);
+    else  
       state = STATE_WAITING;
   }
   else
   {
-    Motors::set(SPEED/4,SPEED);
-    
-    if(Encoders::turn <= turn_goal)
+    if(Encoders::turn - turn_start > turn_goal)
+      Motors::set(SPEED/4,SPEED);
+    else if(off_line)
+      Motors::set(SPEED, SPEED);
+    else  
       state = STATE_WAITING;
   }
 }
@@ -262,13 +268,15 @@ void Follow::follow()
 {
 
   if(Encoders::distance - state_start_distance > follow_min_distance)
+  {
     check_for_intersections();
   
-  if(off_line && Encoders::distance - off_line_distance > 300 ||
-    detected_intersection && Encoders::distance - detected_intersection_distance > 300)
-  {
-    detected_straight = on_line && Encoders::distance - on_line_distance > 100;
-    state = STATE_FOLLOWING_MORE;
+    if(off_line && Encoders::distance - off_line_distance > 300 ||
+      detected_intersection && Encoders::distance - detected_intersection_distance > 300)
+    {
+      detected_straight = on_line && Encoders::distance - on_line_distance > 100;
+      state = STATE_FOLLOWING_MORE;
+    }
   }
   
   if(angle_degrees != 0 && Encoders::distance - state_start_distance > follow_min_distance)
@@ -277,6 +285,8 @@ void Follow::follow()
   uint16_t speed = SPEED;
   if(detected_intersection)
     speed = SPEED/2;
+  else if(Encoders::distance - state_start_distance < 600)
+    speed = SPEED;
   else if(follow_min_distance - (Encoders::distance - state_start_distance) > 1500)
     speed = MAX_SPEED;
   else if(follow_min_distance - (Encoders::distance - state_start_distance) > 500)
