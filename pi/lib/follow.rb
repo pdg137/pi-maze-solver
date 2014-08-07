@@ -24,10 +24,9 @@ class Follow < ResponseState::Service
             end
 
     # blank out exits and status on smooth_turn
-    if smooth_turn
+    if @smooth_turn
       exits = []
       state = :smooth_turn_done
-      @vec = @vec.turn(smooth_turn)
     end
 
     context = { distance: report.distance, exits: exits }

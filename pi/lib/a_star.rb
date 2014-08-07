@@ -52,7 +52,7 @@ class AStar
               else
                 4
               end
-    send_command(4,follow_min_distance)
+    send_command(command,follow_min_distance)
   end
 
   def get_raw_report
