@@ -103,8 +103,6 @@ class LoopedMazeSolver
 
       observe_segment(old_pos, pos)
 
-      puts maze.to_s(pos)
-
       explored_nodes << pos
     end
 
@@ -138,20 +136,22 @@ class LoopedMazeSolver
   end
 
   def explore_to(target)
-    puts "\nexplore to #{target}"
+    puts "\nexplore to #{target.inspect}"
 
     turning_path_follower = TurningPathFollower.new(1800,300)
     turning_path = maze.get_turning_path(vec, pos, target)
+    puts "turning path #{turning_path.inspect}"
 
     turning_path_follower.compute(turning_path) do |turn, follow_min_distance|
       next if turn == :none
+      puts "next turn #{turn.inspect}"
 
       puts turn
       a_star.turn(turn) do |result|
         result.done {
           @vec = vec.turn(turn)
         }
-        result.button { raise }
+        result.button { raise "button pressed" }
       end
 
       puts "follow min=#{follow_min_distance}"
@@ -159,6 +159,7 @@ class LoopedMazeSolver
       a_star.follow(follow_min_distance) do |result|
         result.end {
           record_path(follow_min_distance, result.context)
+          puts "Found end at #{pos}"
           maze.end = pos
         }
         result.intersection {
@@ -168,6 +169,7 @@ class LoopedMazeSolver
         result.button { raise "button pressed" }
       end
 
+      puts maze.to_s(pos)
     end
   end
 
