@@ -89,6 +89,18 @@ class LoopedMazeSolver
     check_deductions(b)
   end
 
+  def move_pos_by_distance(context)
+    units = estimate_grid_units context[:distance]
+    puts "distance #{context[:distance]} -> #{units} units"
+    # TODO: handle zero!
+
+    original_pos = @pos
+    units.times.each do
+      old_pos = pos
+      @pos += vec
+    end
+  end
+
   def record_path(follow_min_distance, context)
     units = estimate_grid_units context[:distance]
     puts "distance #{context[:distance]} -> #{units} units"
@@ -142,21 +154,23 @@ class LoopedMazeSolver
     turning_path = maze.get_turning_path(vec, pos, target)
     puts "turning path #{turning_path.inspect}"
 
-    turning_path_follower.compute(turning_path) do |turn, follow_min_distance|
+    did_smooth_turn = false
+
+    turning_path_follower.compute(turning_path) do |turn, follow_min_distance, next_turn|
       next if turn == :none
-      puts "next turn #{turn.inspect}"
+      puts "turn #{turn.inspect}, then #{follow_min_distance}, next #{next_turn}"
 
-      puts turn
-      a_star.turn(turn) do |result|
-        result.done {
-          @vec = vec.turn(turn)
-        }
-        result.button { raise "button pressed" }
+      if !did_smooth_turn
+        a_star.turn(turn) do |result|
+          result.done {
+            @vec = vec.turn(turn)
+          }
+          result.button { raise "button pressed" }
+        end
       end
+      did_smooth_turn = false
 
-      puts "follow min=#{follow_min_distance}"
-
-      a_star.follow(follow_min_distance) do |result|
+      a_star.follow(follow_min_distance, next_turn) do |result|
         result.end {
           record_path(follow_min_distance, result.context)
           puts "Found end at #{pos}"
@@ -166,6 +180,13 @@ class LoopedMazeSolver
           record_path(follow_min_distance, result.context)
           record_intersection(result.context)
         }
+        result.smooth_turn_done {
+          # can't record much about the path
+          move_pos_by_distance(result.context)
+          @vec = vec.turn(next_turn)
+          did_smooth_turn = true
+        }
+
         result.button { raise "button pressed" }
       end
 
